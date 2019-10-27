@@ -1,0 +1,57 @@
+# This file contains metadata for your plugin. 
+# This file should be included when you package your plugin.# Mandatory items:
+
+[general]
+name=GeoDyn Gemeente
+qgisMinimumVersion=3.4
+description=Wastewater prognosis tool for municipal sewage systems
+    Geografisch Dynamisch afvalwater prognosetool voor gemeente
+version=0.17
+author=BKGIS
+email=b.kropf@bkgis.nl
+
+about=Tool for calculating wastewater prognosis based on
+    Municipal sewage systems (Kikker riodesk)
+    Residental data (BAG)
+    Housing development plans RIGO (https://www.plancapaciteit.nl/)
+    Household drinking water consumption
+    GeoDynWaterschap is develop by BKGIS, for the water Authority HHNK and designed by Mark Lamers.
+
+tracker=https://github.com/bart147/GeodynGem_for_QGIS/issues
+repository=https://github.com/bart147/GeodynGem_for_QGIS
+# End of mandatory metadata
+
+# Recommended items:
+
+# Uncomment the following line and add your changelog:
+changelog:
+    v0.17   (2019-02-06) bugfix calculation 'POC_O_M3_O', improved inp_field descriptions, b_raise_xlrd_import_error added to settings
+    v0.16   (2019-01-31) improved calculations for pump overcapacity, several changes in inp_fields.xls/.csv
+    v0.15   (2019-01-24) issue 34: warning message improvement
+    v0.14   (2019-01-14) geodyn_gem.py updated
+    v0.13   (2019-01-14) bugfix for input layers, csv reader. improved messages. added option for local_settings.py
+    v0.12   (2019-01-03) some bugfixes, improvements and new fields
+    v0.11   (2018-05-18) logo update
+    v0.10   (2018-05-15) test to see if update in Plug-in repo is working
+    v0.9    (2018-05-15) bug in combobox fixed. kept adding layers to input menu on rerun.
+    v0.8    (2018-05-15) problem with updating. bug in function upload because of name change
+    v0.7    (2018-05-15) fixed issues: 13,14,15,16
+    v0.6    (2018-05-08) update icon in resources.py
+    v0.5    (2018-05-08) fixed issues: 1,2,3,4,5,8,9,10,11,12
+	v0.4 	(2018-04-17) bugfix 'module' object has no attribute gdb
+	v0.3 	(2018-04-16) bugfix 
+	v0.2 	(2018-04-16) moved workspace from settings.py to dialog 
+	v0.1 	(2018-04-10) first release 
+
+# Tags are comma separated with spaces allowed
+tags=python, geodyn, afvalwaterprognose, kikker
+
+homepage=https://github.com/bart147/GeodynGem_for_QGIS
+category=Plugins
+icon=icon.png
+# experimental flag
+experimental=True
+
+# deprecated flag (applies to the whole plugin, not just a single version)
+deprecated=False
+
