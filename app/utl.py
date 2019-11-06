@@ -23,8 +23,9 @@ from .settings import qgis_warnings_log
 
 
 # QGIS
-from qgis.gui import QgsMessageBar, QgisInterface
+from qgis.gui import QgisInterface
 from qgis.core import * #QgsMessageLog, QgsVectorJoinInfo, QgsExpression, QgsField, QgsVectorLayer, QgsFeatureRequest
+from qgis.core import Qgis, QgsProject
 from qgis.PyQt.QtCore import QVariant
 
 def start_timer():
@@ -68,28 +69,28 @@ def print_log(message, logType="i", iface=False, **kwargs):
     except IOError:
         pass
 
-    ##QgsMessageLog.logMessage("log_lvl = {}".format(logging.getLogger().getEffectiveLevel()),level=QgsMessageLog.INFO)
+    ##QgsMessageLog.logMessage("log_lvl = {}".format(logging.getLogger().getEffectiveLevel()),level=Qgis.Info)
     if logType == "d" and logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         # alleen als logging level op DEBUG is ingesteld printen!
         logging.debug(message)
-        QgsMessageLog.logMessage("debug: {}".format(message), level=QgsMessageLog.INFO)
+        QgsMessageLog.logMessage("debug: {}".format(message), level=Qgis.Info)
     elif logType == "i": # info
-        QgsMessageLog.logMessage(message, level=QgsMessageLog.INFO)
+        QgsMessageLog.logMessage(message, level=Qgis.Info)
         logging.info(message)
     elif logType == "w": # warning
-        QgsMessageLog.logMessage("WARNING: {}".format(message), level=QgsMessageLog.WARNING)
-        if iface: iface.messageBar().pushMessage("Warning", message, level=QgsMessageBar.WARNING)
+        QgsMessageLog.logMessage("WARNING: {}".format(message), level=Qgis.Warning)
+        if iface: iface.messageBar().pushMessage("Warning", message, level=Qgis.Warning)
         logging.warning(message)
         with open(qgis_warnings_log, 'a') as logfile:
             logfile.write('\n({level}): {message}'.format(level="WARNING", message=message))
 
     elif logType == "e": # error
         logging.error(message)
-        QgsMessageLog.logMessage(message, level=QgsMessageLog.CRITICAL)
-        if iface: iface.messageBar().pushMessage("Error", message, level=QgsMessageBar.CRITICAL)
+        QgsMessageLog.logMessage(message, level=Qgis.Critical)
+        if iface: iface.messageBar().pushMessage("Error", message, level=Qgis.Critical)
     elif logType == "c": # critical
         logging.critical(message)
-        ##iface.messageBar().pushMessage("Error", txt, level=QgsMessageBar.CRITICAL)
+        ##iface.messageBar().pushMessage("Error", txt, level=Qgis.Critical)
 
 
 def fields_to_uppercase(layer):
@@ -337,7 +338,8 @@ def get_d_velden_csv(INP_FIELDS_CSV):
 
 
 def add_layer(layer, visible=True):
-    ins = QgsMapLayerRegistry.instance()
+    ##ins = QgsMapLayerRegistry.instance() # Qgis 2
+    ins = QgsProject.instance()
     layers = ins.mapLayersByName(layer.name())
     for old_layer in layers:
         ##return old_layer

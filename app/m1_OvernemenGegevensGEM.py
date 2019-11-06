@@ -24,11 +24,11 @@ def create_new_inp_polygon(inp_polygon):
     fList = []
     for fld in fields:
         ##if fld.name() <> 'OBJECTID': # condition removed. can cause problems if OBJECTID is not unique
-        fList.append(vl.fieldNameIndex( fld.name() )) # hoe index opvragen?
+        fList.append(vl.fields().indexFromName( fld.name() )) # hoe index opvragen?
     vl.dataProvider().deleteAttributes(fList)
     vl.updateFields()
     # add new OBJECTID
-    if vl.fieldNameIndex('OBJECTID') == -1:
+    if vl.fields().indexFromName('OBJECTID') == -1:
         # add OBJECTID
         fld = QgsField('OBJECTID', QVariant.Int)
         vl.dataProvider().addAttributes([fld])
@@ -44,7 +44,12 @@ def create_new_inp_polygon(inp_polygon):
 	
 def controleer_bemalingsgebieden(inp_polygon, inp_knooppunten):
     '''Controleer of knoopunten in bemalingsgebied liggen.'''
-    processing.runalg("qgis:selectbylocation", inp_knooppunten, inp_polygon, u'intersects', 0, 0)
+    processing.run("qgis:selectbylocation",{
+                    "INPUT" : inp_knooppunten,
+                    "INTERSECT" : inp_polygon,
+                    "PREDICATE" : 0, # 0: intersect
+                    "METHOD" : 0,} # 0: creating new selection
+    )
     inp_knooppunten.invertSelection()
     ids = []
     if inp_knooppunten.fields().indexFromName('VAN_KNOOPN') == -1:
@@ -57,7 +62,7 @@ def controleer_bemalingsgebieden(inp_polygon, inp_knooppunten):
         print_log("1 rioolgemaal ligt niet in een bemalingsgebied {}".format(ids), "w")
     elif len(ids) > 1:
         print_log("{} rioolgemalen liggen niet in een bemalingsgebied {}".format(len(ids),ids), "w")
-    inp_knooppunten.setSelectedFeatures([])
+    inp_knooppunten.selectByIds([])
 	
 def genereer_knooppunten(iface, inp_polygon, sel_afvoerrelaties):
     '''Genereert knooppunten op basis van afvoerrelaties (lijn-bestand) waarbij 1 knooppunt per bemalingsgebied is toegestaan.
@@ -68,7 +73,7 @@ def genereer_knooppunten(iface, inp_polygon, sel_afvoerrelaties):
        '''
     # afvoerrelaties selecteren die niet binnen 1 bemalingsgebied vallen
     sel_afvoerrelaties.selectAll()
-    processing.runalg("qgis:selectbylocation", sel_afvoerrelaties, inp_polygon, u'within', 0, 2)
+    processing.run("qgis:selectbylocation", sel_afvoerrelaties, inp_polygon, u'within', 0, 2)
     print_log("{} features selected".format(sel_afvoerrelaties.selectedFeatureCount()),'d')
     point_layer = QgsVectorLayer("Point?crs=epsg:28992", "knooppunten", "memory")
     pr = point_layer.dataProvider()
@@ -102,7 +107,7 @@ def koppel_knooppunten_aan_bemalingsgebieden(iface, d_velden, inp_polygon, knoop
     # beginpunten selecteren (sel1)
     expr = QgsExpression("\"BEGIN_EIND\" = {}".format(0))
     it = knooppunten.getFeatures(QgsFeatureRequest(expr)) # iterator object
-    knooppunten.setSelectedFeatures([i.id() for i in it])
+    knooppunten.selectByIds([i.id() for i in it])
     print_log("{} selected".format(knooppunten.selectedFeatureCount()), "d")
     # bug 26L error. executing algoritm spatial join #5: export selection to prevent
     QgsVectorFileWriter.writeAsVectorFormat(knooppunten, os.path.join(gdb,"knooppunten_sel1.shp"), "utf-8",
@@ -112,7 +117,7 @@ def koppel_knooppunten_aan_bemalingsgebieden(iface, d_velden, inp_polygon, knoop
     # eindpunten selecteren (sel2)
     expr = QgsExpression("\"BEGIN_EIND\" = {}".format(1))
     it = knooppunten.getFeatures(QgsFeatureRequest(expr))  # iterator object
-    knooppunten.setSelectedFeatures([i.id() for i in it])
+    knooppunten.selectByIds([i.id() for i in it])
     print_log("{} selected".format(knooppunten.selectedFeatureCount()), "d")
     # bug 26L error. executing algoritm spatial join #5: export selection to prevent
     QgsVectorFileWriter.writeAsVectorFormat(knooppunten, os.path.join(gdb, "knooppunten_sel2.shp"), "utf-8",
@@ -121,9 +126,9 @@ def koppel_knooppunten_aan_bemalingsgebieden(iface, d_velden, inp_polygon, knoop
     add_layer(knooppunten_sel2)
     # bemalingsgebieden selecteren die alleen eindpunten bevatten, maar geen beginpunten (eindpunt / rwzi)
     # 1.) selecteer bemalingsgebieden met eindpunten
-    processing.runalg("qgis:selectbylocation", inp_polygon, knooppunten_sel2, ['intersects'], 0, 0)
+    processing.run("qgis:selectbylocation", inp_polygon, knooppunten_sel2, ['intersects'], 0, 0)
     # 2.) verwijder van selectie alles gebieden met beginpunten
-    processing.runalg("qgis:selectbylocation", inp_polygon, knooppunten_sel1, ['intersects'], 0, 2)
+    processing.run("qgis:selectbylocation", inp_polygon, knooppunten_sel1, ['intersects'], 0, 2)
     # exporteer als eindgebieden
     EINDGEBIEDEN = os.path.join(gdb, "eindgebieden.shp")
     QgsVectorFileWriter.writeAsVectorFormat(inp_polygon, EINDGEBIEDEN, "utf-8",
@@ -132,9 +137,9 @@ def koppel_knooppunten_aan_bemalingsgebieden(iface, d_velden, inp_polygon, knoop
     add_layer(eindgebieden)
     # nu bepalen wat de (juiste) ontbrekende knooppunten zijn om toe te voegen (moet eindpunt zijn van afvoerrelatie)
     # 1.) bepaal eindknooppunten van eindgebieden
-    processing.runalg("qgis:selectbylocation", knooppunten_sel2, eindgebieden, ['intersects'], 0, 0)
+    processing.run("qgis:selectbylocation", knooppunten_sel2, eindgebieden, ['intersects'], 0, 0)
     # 2.) bepaal welke knooppunten dit zijn in kikker bestand voor juiste code VANKNOOPN
-    processing.runalg("qgis:selectbylocation", inp_knooppunten, knooppunten_sel2, ['intersects'], 1, 0)
+    processing.run("qgis:selectbylocation", inp_knooppunten, knooppunten_sel2, ['intersects'], 1, 0)
     # extra knooppunten eindgebied toevoegen aan sel1 (beginpunten)
     pr = knooppunten_sel1.dataProvider()
     feat = QgsFeature(knooppunten_sel1.pendingFields())
@@ -143,12 +148,12 @@ def koppel_knooppunten_aan_bemalingsgebieden(iface, d_velden, inp_polygon, knoop
         feat.setAttribute("VAN_KNOOPN", feature['VAN_KNOOPN'])
         pr.addFeatures([feat])
     # remove selections
-    inp_knooppunten.setSelectedFeatures([])
-    inp_polygon.setSelectedFeatures([])
-    knooppunten_sel1.setSelectedFeatures([])
+    inp_knooppunten.selectByIds([])
+    inp_polygon.selectByIds([])
+    knooppunten_sel1.selectByIds([])
     # create polygon lis
-    processing.runalg("qgis:joinattributesbylocation", inp_polygon, knooppunten_sel1, u'intersects', 0, 0, '', 1, POLYGON_LIS)
-    processing.runalg("qgis:joinattributesbylocation", inp_polygon, knooppunten_sel1, u'intersects', 0, 1, 'sum', 1, POLYGON_LIS_SUM)
+    processing.run("qgis:joinattributesbylocation", inp_polygon, knooppunten_sel1, u'intersects', 0, 0, '', 1, POLYGON_LIS)
+    processing.run("qgis:joinattributesbylocation", inp_polygon, knooppunten_sel1, u'intersects', 0, 1, 'sum', 1, POLYGON_LIS_SUM)
     polygon_lis_sum = QgsVectorLayer(POLYGON_LIS_SUM, "polygon_kikker_sum", "ogr")
     polygon_lis = QgsVectorLayer(POLYGON_LIS, "polygon_kikker", "ogr")
     polygon_lis.dataProvider().addAttributes([QgsField('count', QVariant.Int)])
@@ -164,8 +169,8 @@ def koppel_knooppunten_aan_bemalingsgebieden(iface, d_velden, inp_polygon, knoop
                joinfield_input_table="OBJECTID",
                joinfield_join_table="OBJECTID")
     print_log("Bepaal in welk bemalingsgebied het eindpunt van afvoerrelatie ligt...",'i')
-    knooppunten_sel2.setSelectedFeatures([])
-    processing.runalg("qgis:joinattributesbylocation", knooppunten_sel2, polygon_lis, u'intersects', 0, 0, '', 1, EINDKNOOPPUNTEN)
+    knooppunten_sel2.selectByIds([])
+    processing.run("qgis:joinattributesbylocation", knooppunten_sel2, polygon_lis, u'intersects', 0, 0, '', 1, EINDKNOOPPUNTEN)
     eindknooppunten = QgsVectorLayer(EINDKNOOPPUNTEN, "eindknooppunten", "ogr")
     eindknooppunten = add_layer(eindknooppunten)
     ##QgsMapLayerRegistry.instance().addMapLayer(eindknooppunten)
@@ -206,10 +211,10 @@ def lis2graph(layer):
         d_edges = dijkstra(graph_rev, VAN_KNOOPN)[1]  # {'B': 'A', 'C': 'B', 'D': 'C'}
         l_onderliggende_gemalen = str(list(d_edges))  # [u'ZRE-123',u'ZRE-234']
         l_onderliggende_gemalen = l_onderliggende_gemalen.replace("u'", "'").replace("[", "").replace("]", "")
-        layer.changeAttributeValue(feature.id(), layer.fieldNameIndex("K_ONTV_VAN"), l_onderliggende_gemalen) # K_ONTV_VAN = 'ZRE-1','ZRE-2'
-        layer.changeAttributeValue(feature.id(), layer.fieldNameIndex("X_OBEMAL"), len(list(d_edges)))        # X_OBEMAL = 2 (aantal onderbemalingen)
-        layer.changeAttributeValue(feature.id(), layer.fieldNameIndex("X_OPPOMP"),  X_OPPOMP + 1)             # X_OPPOMP = 1 (aantal keer oppompen tot rwzi) met shortestPath ('RWZI','ZRE-4')
-        layer.changeAttributeValue(feature.id(), layer.fieldNameIndex("K_KNP_EIND"), K_KNP_EIND)              # eindbemalingsgebied / overnamepunt. bepaald uit netwerk.
+        layer.changeAttributeValue(feature.id(), layer.fields().indexFromName("K_ONTV_VAN"), l_onderliggende_gemalen) # K_ONTV_VAN = 'ZRE-1','ZRE-2'
+        layer.changeAttributeValue(feature.id(), layer.fields().indexFromName("X_OBEMAL"), len(list(d_edges)))        # X_OBEMAL = 2 (aantal onderbemalingen)
+        layer.changeAttributeValue(feature.id(), layer.fields().indexFromName("X_OPPOMP"),  X_OPPOMP + 1)             # X_OPPOMP = 1 (aantal keer oppompen tot rwzi) met shortestPath ('RWZI','ZRE-4')
+        layer.changeAttributeValue(feature.id(), layer.fields().indexFromName("K_KNP_EIND"), K_KNP_EIND)              # eindbemalingsgebied / overnamepunt. bepaald uit netwerk.
         d_K_ONTV_VAN[VAN_KNOOPN] = l_onderliggende_gemalen
         # onderbemalingen 1 niveau diep
         l_onderliggende_gemalen_n1 = [start for start, end in edges_as_tuple if end == VAN_KNOOPN]  # dus start['A', 'C'] uit tuples[('A', 'B'),('C', 'B')] als end == 'B'
@@ -228,7 +233,7 @@ def controleer_spjoin(layer,fld_join_count):
         print_log("{} - {}".format(VAN_KNOOPN,JOIN_COUNT), "d")
         if JOIN_COUNT == 0 and VAN_KNOOPN != None: # uitzondering: rwzi later aangevuld
             ##feature.setAttribute("count", 1)
-            layer.changeAttributeValue(feature.id(), layer.fieldNameIndex("count"), 1)
+            layer.changeAttributeValue(feature.id(), layer.fields().indexFromName("count"), 1)
             JOIN_COUNT = 1
         if JOIN_COUNT >= 2:
             i_dubbel += 1
@@ -236,7 +241,7 @@ def controleer_spjoin(layer,fld_join_count):
         if JOIN_COUNT == 0:
             i_leeg += 1
             ##feature.setAttribute("VAN_KNOOPN", "LEEG-{}".format(i))
-            layer.changeAttributeValue(feature.id(), layer.fieldNameIndex("VAN_KNOOPN"), "LEEG-{}".format(i))
+            layer.changeAttributeValue(feature.id(), layer.fields().indexFromName("VAN_KNOOPN"), "LEEG-{}".format(i))
     layer.commitChanges()
     if i_dubbel == 1: print_log("{} bemalingsgebied bevat 2 of meer rioolgemalen, zie veld 'count' in eindresultaat".format(i_dubbel),"w")
     if i_dubbel > 1: print_log("{} bemalingsgebieden bevatten 2 of meer rioolgemalen, zie veld 'count' in eindresultaat".format(i_dubbel),"w")
@@ -248,12 +253,12 @@ def controleer_hoofdbemalingsgebieden(polygon_lis):
     """Controleer of hoofdbemalingsgebieden overlappen."""
     # Intersect_analysis (in_features, out_feature_class, {join_attributes}, {cluster_tolerance}, {output_type})
     ##arcpy.Intersect_analysis (POLYGON_LIS, POLYGON_LIS_OVERLAP)
-    processing.runalg("saga:polygonselfintersection", polygon_lis, "VAN_KNOOPN", POLYGON_LIS_OVERLAP)
+    processing.run("saga:polygonselfintersection", polygon_lis, "VAN_KNOOPN", POLYGON_LIS_OVERLAP)
     polygon_lis_overlap = QgsVectorLayer(POLYGON_LIS_OVERLAP, "bemalingsgebieden overlap", "ogr")
     ##QgsMapLayerRegistry.instance().addMapLayer(polygon_lis_overlap)
     expr = QgsExpression("\"VAN_KNOOPN\" {}".format("IS NULL"))
     it = polygon_lis_overlap.getFeatures(QgsFeatureRequest(expr))  # iterator object
-    polygon_lis_overlap.setSelectedFeatures([i.id() for i in it])
+    polygon_lis_overlap.selectByIds([i.id() for i in it])
     if polygon_lis_overlap.selectedFeatureCount() > 0:
         polygon_lis_overlap = add_layer(polygon_lis_overlap, False)
         print_log("{} bemalingsgebieden met overlap! Zie selectie in layer 'bemalingsgebieden overlap'".format(polygon_lis_overlap.selectedFeatureCount()*2),'w',iface=g_iface)

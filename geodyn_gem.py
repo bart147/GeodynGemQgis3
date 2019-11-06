@@ -26,7 +26,6 @@ from qgis.PyQt.QtWidgets import QAction, QMessageBox, QFileDialog
 from qgis.PyQt.QtGui import QIcon
 #from qgis.core import QgsMessageLog, QgsMapLayerRegistry, QgsVectorFileWriter, QgsVectorLayer
 from qgis.core import QgsMessageLog, QgsVectorFileWriter, QgsVectorLayer, QgsProject
-from qgis.gui import QgsMessageBar
 # Initialize Qt resources from file resources.py
 from . import resources
 # Import the code for the dialog
@@ -39,7 +38,8 @@ from .app.utl import print_log, blokje_log, get_d_velden, get_d_velden_csv
 from .app.settings import keyword_1, keyword_2, keyword_3, keyword_4, keyword_5, keyword_6, keyword_7, result_dir
 # for backward compatibility with older QGIS versions (without QgsWKBTypes)
 try:
-    from qgis.core import QgsWKBTypes
+    ##from qgis.core import QgsWKBTypes
+    from qgis.core import QgsWkbTypes
     b_QgsWKBTypes = True
 except ImportError:
     b_QgsWKBTypes = False
@@ -188,7 +188,9 @@ class GeodynGem(object):
         ins = QgsProject.instance()
         ##ins = QgsMapLayerRegistry.instance()
         ##layers = ins.mapLayersByName()
-        layers = self.iface.layerTreeView().layers()
+        ##layers = QgsProject.instance().mapLayers().values() # For QGIS 3, QgsMapLayerRegistry's functionality has been moved to QgsProject: https://gis.stackexchange.com/questions/26257/iterating-over-map-layers-in-qgis-python/125003
+        layers = QgsProject.instance().mapLayers().values()
+
         for layer in layers:
             source = layer.source()
             if layer.name() in layers_to_remove:
@@ -210,7 +212,7 @@ class GeodynGem(object):
     def run(self):
         """Run method that performs all the real work"""
         self.remove_result_layers(remove_all=True, delete_source=True)
-        layers = self.iface.layerTreeView().layers()
+        layers = QgsProject.instance().mapLayers().values()
         if not layers:
             print_log("Tool afgebroken! Geen layers gevonden. Voeg eerst layers toe", "e", self.iface)
             return
@@ -219,11 +221,11 @@ class GeodynGem(object):
             for i, layer in enumerate(layers):
                 if hasattr(layer, "wkbType"):
                     # qgis.core.QgsWKBTypes.displayString(int(vl.wkbType()))
-                    if "point" in QgsWKBTypes.displayString(int(layer.wkbType())).lower(): ## QGis.WKBPoint:
+                    if "point" in QgsWkbTypes.displayString(int(layer.wkbType())).lower(): ## QGis.WKBPoint:
                         layer_points.append(layer)
-                    elif "line" in QgsWKBTypes.displayString(int(layer.wkbType())).lower(): ##QGis.WKBLineString:
+                    elif "line" in QgsWkbTypes.displayString(int(layer.wkbType())).lower(): ##QGis.WKBLineString:
                         layer_lines.append(layer)
-                    elif "polygon" in QgsWKBTypes.displayString(int(layer.wkbType())).lower(): ##QGis.WKBPolygon:
+                    elif "polygon" in QgsWkbTypes.displayString(int(layer.wkbType())).lower(): ##QGis.WKBPolygon:
                         layer_polygons.append(layer)
                     else:
                         pass
@@ -239,13 +241,13 @@ class GeodynGem(object):
                         Controleer of juiste layers zijn geselecteerd of upgrade QGIS.",
                 "w", self.iface)
             layer_points = layer_lines = layer_polygons = layers
-            layer_1 = layers[:]
-            layer_2 = layers[:]
-            layer_3 = layers[:]
-            layer_4 = layers[:]
-            layer_5 = layers[:]
-            layer_6 = layers[:]
-            layer_7 = layers[:]
+            layer_1 = list(layers)[:]
+            layer_2 = list(layers)[:]
+            layer_3 = list(layers)[:]
+            layer_4 = list(layers)[:]
+            layer_5 = list(layers)[:]
+            layer_6 = list(layers)[:]
+            layer_7 = list(layers)[:]
         layer_1 = self.move_to_front(layer_1, keyword_1)
         layer_2 = self.move_to_front(layer_2, keyword_2)
         layer_3 = self.move_to_front(layer_3, keyword_3)
@@ -321,11 +323,11 @@ class GeodynGem(object):
                 print_log("{}\n{}".format(fld, d_velden[fld]), "d")
             # check for required fields
             vl = sel_layers[0] # knooppunt
-            if vl.fieldNameIndex('VAN_KNOOPN') == -1:
+            if vl.fields().indexFromName('VAN_KNOOPN') == -1:
                 print_log("Script afgebroken! Verplicht veld 'VAN_KNOOPN' niet gevonden in kaartlaag '{}'".format(vl.name()), "e", self.iface)
                 return
             vl = sel_layers[1]  # afvoerrelatie
-            if vl.fieldNameIndex('VAN_KNOOPN') == -1:
+            if vl.fields().indexFromName('VAN_KNOOPN') == -1:
                 print_log("Script afgebroken! Verplicht veld 'VAN_KNOOPN' niet gevonden in kaartlaag '{}'".format(vl.name()), "e", self.iface)
                 return
             # run module 1
