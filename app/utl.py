@@ -174,13 +174,17 @@ def bereken_veld(fc, fld_name, d_fld):
             fc.selectByIds([i.id() for i in it])
 
         # calculate field
+        context = QgsExpressionContext()
+        scope = QgsExpressionContextScope()
+        context.appendScope(scope)
         e = QgsExpression(expression)
-        e.prepare(fc.fields())
+        ##e.prepare(fc.fields())
 
         fc.startEditing()
         idx = fc.fields().indexFromName(fld_name)
         for f in fc.getFeatures():
-            f[idx] = e.evaluate(f)
+            scope.setFeature(f)
+            f[idx] = e.evaluate(context)
             fc.updateFeature(f)
         fc.commitChanges()
         fc.selectByIds([])
@@ -209,6 +213,7 @@ def join_field(input_table, join_table, field_to_calc, field_to_copy, joinfield_
         ## joinObject = QgsVectorJoinInfo()
         ## joinObject.joinLayerId = join_table.id()
         ## joinObject.joinFieldName = joinfield_join_table
+        ## joinObject.joinFieldName = joinfield_join_table
         ## joinObject.targetFieldName = joinfield_input_table
         # add join qgis 3
         joinObject = QgsVectorLayerJoinInfo()  # old: QgsVectorJoinInfo()
@@ -224,7 +229,7 @@ def join_field(input_table, join_table, field_to_calc, field_to_copy, joinfield_
         e = QgsExpression('"{}_{}"'.format(join_table.name(),field_to_copy))
         ##e.prepare(input_table.fields()) # qgis 2
         print_log("expression = {}".format('"{}_{}"'.format(join_table.name(),field_to_copy)), "d")
-        
+
         check = input_table.fields().indexFromName('{}_{}'.format(join_table.name(),field_to_copy))
         print_log("fieldindex = {}".format(check), "d")
         if check == -1:

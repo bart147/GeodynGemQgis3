@@ -329,11 +329,16 @@ class GeodynGem(object):
             vl = sel_layers[1]  # afvoerrelatie
             if vl.fields().indexFromName('VAN_KNOOPN') == -1:
                 print_log("Script afgebroken! Verplicht veld 'VAN_KNOOPN' niet gevonden in kaartlaag '{}'".format(vl.name()), "e", self.iface)
-                return
+
             # run module 1
-            l_K_ONTV_VAN, inp_polygon_layer = m1.main(self.iface, sel_layers, gdb, d_velden)
+            ##l_K_ONTV_VAN, inp_polygon_layer = m1.main(self.iface, sel_layers, gdb, d_velden)
+
             # run module 2
-            return
+            # temp for testing module 2
+            l_K_ONTV_VAN =  [{'RGM009': "'RGM005'", '30.6': '', 'RGM005': '', '10.1': '', 'RGM008': '', '400233': "'10.1', 'RGM004', '47.1', 'RGM002', 'RGM001', 'RGM003'", 'RGM004': "'RGM002', 'RGM001', 'RGM003'", 'RGM002': "'RGM001', 'RGM003'", 'RGM003': '', 'RGM001': "'RGM003'", '26.1': '', '18.6': '', '50.1': '', '21.2': '', '38.2': '', '14.1': '', '46.1': '', 'RG-ZV-BE': "'18.6', '21.2'", '14.2': '', '4550': "'4502', '4636', '1611', '4242', '5143', '5246', '4474', '7076'", '4502': '', '4636': '', '1611': '', '4242': '', '5143': '', '5246': '', '4312': '', '47.1': '', '4743': '', 'boostrEDAM': "'0372', '0510', '0339', '0016', 'RGM013', '4306', '4307', '4315', '38.2', '37.1'", '4474': "'7076'", '7076': '', '4306': '', '4307': '', '0372': "'4306', '4307', '4315'", '4315': '', '0510': '', '0339': '', '0016': '', '37.1': '', 'RGM013': "'38.2', '37.1'", 'RGM021N': '', 'RG-ZVRKD': "'30.6', '26.1', '50.1'", 'RWZIkatw': "'4550', '4743', 'boostrEDAM', '4502', '4636', '1611', '4242', '5143', '5246', '4474', '0372', '0510', '0339', '0016', 'RGM013', '7076', '4306', '4307', '4315', '38.2', '37.1'", 'RWZIoosth': "'RGM009', 'RGM008', '400233', '14.1', '46.1', 'RG-ZV-BE', '14.2', 'RGM021N', '10.1', 'RGM004', '47.1', '18.6', '21.2', 'RGM005', 'RGM002', 'RGM001', 'RGM003'"}, {'RGM009': "'RGM005'", '30.6': '', 'RGM005': '', '10.1': '', 'RGM008': '', '400233': "'10.1', 'RGM004', '47.1'", 'RGM004': "'RGM002'", 'RGM002': "'RGM001'", 'RGM003': '', 'RGM001': "'RGM003'", '26.1': '', '18.6': '', '50.1': '', '21.2': '', '38.2': '', '14.1': '', '46.1': '', 'RG-ZV-BE': "'18.6', '21.2'", '14.2': '', '4550': "'4502', '4636', '1611', '4242', '5143', '5246', '4474'", '4502': '', '4636': '', '1611': '', '4242': '', '5143': '', '5246': '', '4312': '', '47.1': '', '4743': '', 'boostrEDAM': "'0372', '0510', '0339', '0016', 'RGM013'", '4474': "'7076'", '7076': '', '4306': '', '4307': '', '0372': "'4306', '4307', '4315'", '4315': '', '0510': '', '0339': '', '0016': '', '37.1': '', 'RGM013': "'38.2', '37.1'", 'RGM021N': '', 'RG-ZVRKD': "'30.6', '26.1', '50.1'", 'RWZIkatw': "'4550', '4743', 'boostrEDAM'", 'RWZIoosth': "'RGM009', 'RGM008', '400233', '14.1', '46.1', 'RG-ZV-BE', '14.2', 'RGM021N'"}]
+            INP_POLYGON_COPY = r'G:\GISDATA\QGIS\geodyn_gem_qgis3\data\tmp\inp_polygon_copy.shp'
+            inp_polygon_layer = QgsVectorLayer(INP_POLYGON_COPY, "inp_polygon_layer", "ogr")
+
             m2.main(self.iface, sel_layers, gdb, d_velden, l_K_ONTV_VAN, inp_polygon_layer)
             if settings.b_remove_results_after_run:
                 self.remove_result_layers(remove_all=False, delete_source=False)

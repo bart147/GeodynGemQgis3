@@ -57,8 +57,8 @@ b_remove_results_after_run = False  # set to False to keep results after run
 
 d_velden_tmp = {
     # PWN temp
-    "SUMPAR_M3U": {"add_fld": "stap2tmp", "field_type" : "DOUBLE", "field_alias" : "SUM_PAR_RESULT_M3U", "expression": "[sumPAR_RES] / 1000"}, #tmp in STATS_DRINKWATER
-    "SUMZAK_M3U": {"add_fld": "stap2tmp", "field_type" : "DOUBLE", "field_alias" : "SUM_ZAK_RESULT_M3U", "expression": "[sumZAK_RES] / 1000"}, #tmp in STATS_DRINKWATER
+    "SUMPAR_M3U": {"add_fld": "stap2tmp", "field_type" : "DOUBLE", "field_alias" : "SUM_PAR_RESULT_M3U", "expression": "[PAR_RESULT_sum] / 1000"}, #tmp in STATS_DRINKWATER
+    "SUMZAK_M3U": {"add_fld": "stap2tmp", "field_type" : "DOUBLE", "field_alias" : "SUM_ZAK_RESULT_M3U", "expression": "[ZAK_RESULT_sum] / 1000"}, #tmp in STATS_DRINKWATER
     "HA_BEM_G"  : {"add_fld": "stap3tmp", "field_type" : "DOUBLE", "field_alias" : "opp bemalingsgebied ha"}, #, "expression": "[sum]/10000"},
     "PERCENTAGE"  : {"add_fld": "stap4tmp", "field_type" : "DOUBLE", "field_alias" : "percentage", "expression": "[SUM_SHAPE_Area]/[OPP_BEMGEBIED]*100"},
     }
