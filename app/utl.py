@@ -25,7 +25,7 @@ from .settings import qgis_warnings_log
 # QGIS
 from qgis.gui import QgisInterface
 from qgis.core import * #QgsMessageLog, QgsVectorJoinInfo, QgsExpression, QgsField, QgsVectorLayer, QgsFeatureRequest
-from qgis.core import Qgis, QgsProject
+from qgis.core import Qgis, QgsProject, QgsVectorLayerJoinInfo
 from qgis.PyQt.QtCore import QVariant
 
 def start_timer():
@@ -97,7 +97,7 @@ def fields_to_uppercase(layer):
     '''rename fields to uppercase'''
     return
     layer.startEditing()
-    for idx, field in enumerate(layer.pendingFields()):
+    for idx, field in enumerate(layer.fields()):
         if field.name().upper() != field.name():
             layer.renameAttribute(idx, field.name().upper())
     layer.commitChanges()
@@ -112,7 +112,7 @@ def add_field_from_dict(fc, fld_name, d_fld):
 
     print_log("veld {} toevoegen".format(fld_name), "d")
     fld = d_fld[fld_name] # dict with field parameters
-    if fld in [field.name() for field in fc.pendingFields()]:
+    if fld in [field.name() for field in fc.fields()]:
         return
     if "field_length" in list(fld.keys()):
         field_length = fld["field_length"]
@@ -131,7 +131,7 @@ def add_field_from_dict(fc, fld_name, d_fld):
         "DATE" : QVariant.DateTime,
     }
 
-    if fc.fieldNameIndex(fld_name) == -1:
+    if fc.fields().indexFromName(fld_name) == -1:
         fc.dataProvider().addAttributes([QgsField(prec=2, name=fld_name, type=fldtype_mapper.get(fld["field_type"],QVariant.String), len=field_length)])
         fc.updateFields()
 
@@ -171,19 +171,19 @@ def bereken_veld(fc, fld_name, d_fld):
             expr = QgsExpression(where_clause)
             print_log(where_clause, "d")
             it = fc.getFeatures(QgsFeatureRequest(expr))  # iterator object
-            fc.setSelectedFeatures([i.id() for i in it])
+            fc.selectByIds([i.id() for i in it])
 
         # calculate field
         e = QgsExpression(expression)
-        e.prepare(fc.pendingFields())
+        e.prepare(fc.fields())
 
         fc.startEditing()
-        idx = fc.fieldNameIndex(fld_name)
+        idx = fc.fields().indexFromName(fld_name)
         for f in fc.getFeatures():
             f[idx] = e.evaluate(f)
             fc.updateFeature(f)
         fc.commitChanges()
-        fc.setSelectedFeatures([])
+        fc.selectByIds([])
 
     except Exception as e:
         print_log("probleem bij bereken veld {}! {}".format(fld_name,e),"w")
@@ -204,42 +204,51 @@ def join_field(input_table, join_table, field_to_calc, field_to_copy, joinfield_
 
         print_log("joining field {} from {}...".format(field_to_calc, os.path.basename(join_table.name())), "d")
 
-        input_table.setSelectedFeatures([])
-        # add join
-        joinObject = QgsVectorJoinInfo()
-        joinObject.joinLayerId = join_table.id()
-        joinObject.joinFieldName = joinfield_join_table
-        joinObject.targetFieldName = joinfield_input_table
+        input_table.selectByIds([])
+        # add join old way qgis 2
+        ## joinObject = QgsVectorJoinInfo()
+        ## joinObject.joinLayerId = join_table.id()
+        ## joinObject.joinFieldName = joinfield_join_table
+        ## joinObject.targetFieldName = joinfield_input_table
+        # add join qgis 3
+        joinObject = QgsVectorLayerJoinInfo()  # old: QgsVectorJoinInfo()
+        joinObject.setJoinLayer(join_table)
+        joinObject.setJoinFieldName(joinfield_join_table)
+        joinObject.setTargetFieldName(joinfield_input_table)
         input_table.addJoin(joinObject)
 
         # calculate field
+        context = QgsExpressionContext()
+        scope = QgsExpressionContextScope()
+        context.appendScope(scope)
         e = QgsExpression('"{}_{}"'.format(join_table.name(),field_to_copy))
-        e.prepare(input_table.pendingFields())
+        ##e.prepare(input_table.fields()) # qgis 2
         print_log("expression = {}".format('"{}_{}"'.format(join_table.name(),field_to_copy)), "d")
-
-        check = input_table.fieldNameIndex('{}_{}'.format(join_table.name(),field_to_copy))
+        
+        check = input_table.fields().indexFromName('{}_{}'.format(join_table.name(),field_to_copy))
         print_log("fieldindex = {}".format(check), "d")
         if check == -1:
             print_log("[{}] is leeg omdat [{}] ontbreekt in kaartlaag '{}'.".format(field_to_calc, field_to_copy, join_table.name()), "w")
 
         input_table.startEditing()
-        idx = input_table.fieldNameIndex(field_to_calc)
+        idx = input_table.fields().indexFromName(field_to_calc)
         if inner_join:
             print_log("inner_join = True", 'd')
             s_expr = '"{}_{}" IS NOT NULL'.format(join_table.name(),field_to_copy)
             print_log(s_expr, 'd')
             expr = QgsExpression(s_expr)
             it = input_table.getFeatures(QgsFeatureRequest(expr))  # iterator object
-            input_table.setSelectedFeatures([i.id() for i in it])
+            input_table.selectByIds([i.id() for i in it])
             features = input_table.selectedFeatures()
         else:
             features = input_table.getFeatures()
         for f in features:
-            f[idx] = e.evaluate(f)
+            scope.setFeature(f)
+            f[idx] = e.evaluate(context) # qgis 2: e.evaluate(f)
             input_table.updateFeature(f)
         input_table.commitChanges()
 
-        input_table.removeJoin(joinObject.joinLayerId)
+        input_table.removeJoin(joinObject.joinLayerId())
 
     # except Exception as e:
     #     print_log("problemen met join_field {}! {}".format(field_to_calc,e),"w")
@@ -351,12 +360,12 @@ def add_layer(layer, visible=True):
 
 
 def update_datetime(layer, fieldname):
-    if layer.fieldNameIndex(fieldname) == -1:
+    if layer.fields().indexFromName(fieldname) == -1:
         layer.dataProvider().addAttributes([QgsField(name=fieldname, type=QVariant.String, len=19)])
         layer.updateFields()
-    field = layer.fieldNameIndex(fieldname)
+    field = layer.fields().indexFromName(fieldname)
     e = QgsExpression( " $now " )
-    e.prepare( layer.pendingFields() )
+    e.prepare( layer.fields() )
     layer.startEditing()
     for feat in layer.getFeatures():
         feat[field] = e.evaluate( feat )

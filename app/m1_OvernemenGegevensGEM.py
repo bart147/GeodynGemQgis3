@@ -73,7 +73,13 @@ def genereer_knooppunten(iface, inp_polygon, sel_afvoerrelaties):
        '''
     # afvoerrelaties selecteren die niet binnen 1 bemalingsgebied vallen
     sel_afvoerrelaties.selectAll()
-    processing.run("qgis:selectbylocation", sel_afvoerrelaties, inp_polygon, u'within', 0, 2)
+    ##processing.run("qgis:selectbylocation", sel_afvoerrelaties, inp_polygon, u'within', 0, 2) # qgis 2
+    processing.run("qgis:selectbylocation", {
+        "INPUT": sel_afvoerrelaties,
+        "INTERSECT": inp_polygon,
+        "PREDICATE": 6,  # 0: intersect, 6: are within
+        "METHOD": 3, }  # 0: creating new selection, 2: selecting within current selection, 3: remove from current selection
+                   )
     print_log("{} features selected".format(sel_afvoerrelaties.selectedFeatureCount()),'d')
     point_layer = QgsVectorLayer("Point?crs=epsg:28992", "knooppunten", "memory")
     pr = point_layer.dataProvider()
@@ -81,25 +87,26 @@ def genereer_knooppunten(iface, inp_polygon, sel_afvoerrelaties):
         [QgsField("VAN_KNOOPN", QVariant.String),
          QgsField("BEGIN_EIND", QVariant.Int)])
     point_layer.updateFields()
-    feat = QgsFeature(point_layer.pendingFields())
+    point_layer = add_layer(point_layer)
+    feat = QgsFeature(point_layer.fields())
     for i, feature in enumerate(sel_afvoerrelaties.selectedFeatures()):  #  .getFeatures()
-        geom = feature.geometry().asPolyline()
-        start_point = QgsPoint(geom[0])
-        end_point = QgsPoint(geom[-1])
-        feat.setGeometry(QgsGeometry.fromPoint(start_point))
+        geom = feature.geometry().asMultiPolyline()[0]
+        start_point = QgsPointXY(geom[0])
+        end_point = QgsPointXY(geom[-1])
+        feat.setGeometry(QgsGeometry.fromPointXY(start_point))
         feat.setAttribute("VAN_KNOOPN", feature['VAN_KNOOPN'])
         feat.setAttribute("BEGIN_EIND", 0)
         pr.addFeatures([feat])
         ##point_layer.changeAttributeValue(i, 0, "hoi")
         ##i += 1
-        feat.setGeometry(QgsGeometry.fromPoint(end_point))
+        feat.setGeometry(QgsGeometry.fromPointXY(end_point))
         feat.setAttribute("VAN_KNOOPN", feature['VAN_KNOOPN'])
         feat.setAttribute("BEGIN_EIND", 1)
         ##point_layer.changeAttributeValue(i, 1, 99)
         pr.addFeatures([feat])
     ##point_layer.updateFields()
-    point_layer = add_layer(point_layer)
-    ##QgsMapLayerRegistry.instance().addMapLayer(point_layer)
+
+    ##QgsProject.instance().addMapLayer(point_layer)
     return point_layer
 	
 def koppel_knooppunten_aan_bemalingsgebieden(iface, d_velden, inp_polygon, knooppunten, inp_knooppunten):
@@ -126,9 +133,19 @@ def koppel_knooppunten_aan_bemalingsgebieden(iface, d_velden, inp_polygon, knoop
     add_layer(knooppunten_sel2)
     # bemalingsgebieden selecteren die alleen eindpunten bevatten, maar geen beginpunten (eindpunt / rwzi)
     # 1.) selecteer bemalingsgebieden met eindpunten
-    processing.run("qgis:selectbylocation", inp_polygon, knooppunten_sel2, ['intersects'], 0, 0)
+    ##processing.runalg("qgis:selectbylocation", inp_polygon, knooppunten_sel2, ['intersects'], 0, 0)
+    processing.run("qgis:selectbylocation", {
+        "INPUT": inp_polygon,
+        "INTERSECT": knooppunten_sel2,
+        "PREDICATE": 0,  # 0: intersect, 6: are within
+        "METHOD": 0, }) # 0: creating new selection, 2: selecting within current selection, 3: remove from current selection
     # 2.) verwijder van selectie alles gebieden met beginpunten
-    processing.run("qgis:selectbylocation", inp_polygon, knooppunten_sel1, ['intersects'], 0, 2)
+    ##processing.runalg("qgis:selectbylocation", inp_polygon, knooppunten_sel1, ['intersects'], 0, 2)
+    processing.run("qgis:selectbylocation", {
+        "INPUT": inp_polygon,
+        "INTERSECT": knooppunten_sel1,
+        "PREDICATE": 0,  # 0: intersect, 6: are within
+        "METHOD": 3, })  # 0: creating new selection, 2: selecting within current selection, 3: remove from current selection
     # exporteer als eindgebieden
     EINDGEBIEDEN = os.path.join(gdb, "eindgebieden.shp")
     QgsVectorFileWriter.writeAsVectorFormat(inp_polygon, EINDGEBIEDEN, "utf-8",
@@ -137,12 +154,22 @@ def koppel_knooppunten_aan_bemalingsgebieden(iface, d_velden, inp_polygon, knoop
     add_layer(eindgebieden)
     # nu bepalen wat de (juiste) ontbrekende knooppunten zijn om toe te voegen (moet eindpunt zijn van afvoerrelatie)
     # 1.) bepaal eindknooppunten van eindgebieden
-    processing.run("qgis:selectbylocation", knooppunten_sel2, eindgebieden, ['intersects'], 0, 0)
+    ##processing.runalg("qgis:selectbylocation", knooppunten_sel2, eindgebieden, ['intersects'], 0, 0)
+    processing.run("qgis:selectbylocation", {
+        "INPUT": knooppunten_sel2,
+        "INTERSECT": eindgebieden,
+        "PREDICATE": 0,  # 0: intersect, 6: are within
+        "METHOD": 0, })  # 0: creating new selection, 2: selecting within current selection, 3: remove from current selection
     # 2.) bepaal welke knooppunten dit zijn in kikker bestand voor juiste code VANKNOOPN
-    processing.run("qgis:selectbylocation", inp_knooppunten, knooppunten_sel2, ['intersects'], 1, 0)
+    ##processing.runalg("qgis:selectbylocation", inp_knooppunten, knooppunten_sel2, ['intersects'], 1, 0)
+    processing.run("qgis:selectbylocation", {
+        "INPUT": inp_knooppunten,
+        "INTERSECT": knooppunten_sel2,
+        "PREDICATE": 0,  # 0: intersect, 6: are within
+        "METHOD": 0, })  # 0: creating new selection, 2: selecting within current selection, 3: remove from current selection
     # extra knooppunten eindgebied toevoegen aan sel1 (beginpunten)
     pr = knooppunten_sel1.dataProvider()
-    feat = QgsFeature(knooppunten_sel1.pendingFields())
+    feat = QgsFeature(knooppunten_sel1.fields())
     for feature in inp_knooppunten.selectedFeatures():
         feat.setGeometry(feature.geometry())
         feat.setAttribute("VAN_KNOOPN", feature['VAN_KNOOPN'])
@@ -152,8 +179,23 @@ def koppel_knooppunten_aan_bemalingsgebieden(iface, d_velden, inp_polygon, knoop
     inp_polygon.selectByIds([])
     knooppunten_sel1.selectByIds([])
     # create polygon lis
-    processing.run("qgis:joinattributesbylocation", inp_polygon, knooppunten_sel1, u'intersects', 0, 0, '', 1, POLYGON_LIS)
-    processing.run("qgis:joinattributesbylocation", inp_polygon, knooppunten_sel1, u'intersects', 0, 1, 'sum', 1, POLYGON_LIS_SUM)
+    ##processing.runalg("qgis:joinattributesbylocation", inp_polygon, knooppunten_sel1, u'intersects', 0, 0, '', 1, POLYGON_LIS)
+    processing.run("qgis:joinattributesbylocation", {
+        "INPUT" : inp_polygon,
+        "JOIN" : knooppunten_sel1,
+        "PREDICATE" : 0, # "u'intersects'
+        "METHOD" : 1, # 0: Create separate feature for each located feature (one-to-many), 1: Take attributes of the first located feature only (one-to-one)
+        "DISCARD_NONMATCHING" : False, # 0: keep all, 1: Discard records which could not be joined
+        "OUTPUT" : POLYGON_LIS})
+    ##processing.runalg("qgis:joinattributesbylocation", inp_polygon, knooppunten_sel1, u'intersects', 0, 1, 'sum', 1, POLYGON_LIS_SUM)
+    processing.run("qgis:joinbylocationsummary", {
+        "INPUT": inp_polygon,
+        "JOIN": knooppunten_sel1,
+        "PREDICATE": 0,  # "u'intersects'
+        'JOIN_FIELDS': ['VAN_KNOOPN'],
+        'SUMMARIES': [0], # 0 - count, 5 - sum
+        "DISCARD_NONMATCHING": False,  # False: keep all (1 in qgis 2), True: Discard records which could not be joined (0 in qgis 2)
+        "OUTPUT": POLYGON_LIS_SUM})
     polygon_lis_sum = QgsVectorLayer(POLYGON_LIS_SUM, "polygon_kikker_sum", "ogr")
     polygon_lis = QgsVectorLayer(POLYGON_LIS, "polygon_kikker", "ogr")
     polygon_lis.dataProvider().addAttributes([QgsField('count', QVariant.Int)])
@@ -165,15 +207,22 @@ def koppel_knooppunten_aan_bemalingsgebieden(iface, d_velden, inp_polygon, knoop
     join_field(input_table=polygon_lis,
                join_table=polygon_lis_sum,
                field_to_calc="count",
-               field_to_copy="count",
+               field_to_copy="VAN_KNOOPN",
                joinfield_input_table="OBJECTID",
                joinfield_join_table="OBJECTID")
     print_log("Bepaal in welk bemalingsgebied het eindpunt van afvoerrelatie ligt...",'i')
     knooppunten_sel2.selectByIds([])
-    processing.run("qgis:joinattributesbylocation", knooppunten_sel2, polygon_lis, u'intersects', 0, 0, '', 1, EINDKNOOPPUNTEN)
+    ##processing.runalg("qgis:joinattributesbylocation", knooppunten_sel2, polygon_lis, u'intersects', 0, 0, '', 1, EINDKNOOPPUNTEN)
+    processing.run("qgis:joinattributesbylocation", {
+        "INPUT": knooppunten_sel2,
+        "JOIN": polygon_lis,
+        "PREDICATE": 0,  # "u'intersects'
+        "METHOD": 0,# 0: Create separate feature for each located feature (one-to-many), 1: Take attributes of the first located feature only (one-to-one)
+        "DISCARD_NONMATCHING": False,  # False: keep all (1 in qgis 2), True: Discard records which could not be joined (0 in qgis 2)
+        "OUTPUT": EINDKNOOPPUNTEN})
     eindknooppunten = QgsVectorLayer(EINDKNOOPPUNTEN, "eindknooppunten", "ogr")
     eindknooppunten = add_layer(eindknooppunten)
-    ##QgsMapLayerRegistry.instance().addMapLayer(eindknooppunten)
+    ##QgsProject.instance().addMapLayer(eindknooppunten)
     # invullen veld LOOST_OP met code bemalingsgebied.
     add_field_from_dict_label(polygon_lis, "st1a", d_velden)
     join_field(polygon_lis, eindknooppunten, "K_LOOST_OP", "VAN_KNOO_1", "VAN_KNOOPN", "VAN_KNOOPN")
@@ -253,9 +302,13 @@ def controleer_hoofdbemalingsgebieden(polygon_lis):
     """Controleer of hoofdbemalingsgebieden overlappen."""
     # Intersect_analysis (in_features, out_feature_class, {join_attributes}, {cluster_tolerance}, {output_type})
     ##arcpy.Intersect_analysis (POLYGON_LIS, POLYGON_LIS_OVERLAP)
-    processing.run("saga:polygonselfintersection", polygon_lis, "VAN_KNOOPN", POLYGON_LIS_OVERLAP)
+    ##processing.runalg("saga:polygonselfintersection", polygon_lis, "VAN_KNOOPN", POLYGON_LIS_OVERLAP)
+    processing.run("saga:polygonselfintersection",
+                   {'POLYGONS': polygon_lis,
+                    'ID': 'VAN_KNOOPN',
+                    'INTERSECT': POLYGON_LIS_OVERLAP})
     polygon_lis_overlap = QgsVectorLayer(POLYGON_LIS_OVERLAP, "bemalingsgebieden overlap", "ogr")
-    ##QgsMapLayerRegistry.instance().addMapLayer(polygon_lis_overlap)
+    ##QgsProject.instance().addMapLayer(polygon_lis_overlap)
     expr = QgsExpression("\"VAN_KNOOPN\" {}".format("IS NULL"))
     it = polygon_lis_overlap.getFeatures(QgsFeatureRequest(expr))  # iterator object
     polygon_lis_overlap.selectByIds([i.id() for i in it])
@@ -266,7 +319,7 @@ def controleer_hoofdbemalingsgebieden(polygon_lis):
             print_log("\toverlap tussen bemalingsgebieden {}".format(feature["ID"]),"i")
     else:
         print_log("geen overlap gevonden tussen bemalingsgebieden", "i")
-        QgsMapLayerRegistry.instance().removeMapLayer(polygon_lis_overlap.name())
+        QgsProject.instance().removeMapLayer(polygon_lis_overlap.name())
     return polygon_lis_overlap
 	
 def main(iface, layers, workspace, d_velden):
