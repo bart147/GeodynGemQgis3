@@ -50,6 +50,7 @@ l_result_layers_to_remove = [
 
 b_raise_xlrd_import_error = False  # raise xlrd import error to test csv file.
 b_remove_results_after_run = False  # set to False to keep results after run
+b_skip_spatial_join = False # toggle True/False to skip the spatial join for faster development. only works if spatial_join results already present
 
 # dict d_velden_tmp
 # purpose: dict d_velden_tmp is een aanvulling op d_velden (d_velden wordt uit de inp_fields.xlsx gegenereerd).

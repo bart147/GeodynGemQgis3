@@ -369,11 +369,15 @@ def update_datetime(layer, fieldname):
         layer.dataProvider().addAttributes([QgsField(name=fieldname, type=QVariant.String, len=19)])
         layer.updateFields()
     field = layer.fields().indexFromName(fieldname)
+    context = QgsExpressionContext()
+    scope = QgsExpressionContextScope()
+    context.appendScope(scope)
     e = QgsExpression( " $now " )
-    e.prepare( layer.fields() )
+    ##e.prepare( layer.fields() )
     layer.startEditing()
     for feat in layer.getFeatures():
-        feat[field] = e.evaluate( feat )
+        scope.setFeature(feat)
+        feat[field] = e.evaluate(context)
         layer.updateFeature( feat )
     layer.commitChanges()
 
