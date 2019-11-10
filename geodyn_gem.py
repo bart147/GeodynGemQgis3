@@ -197,10 +197,27 @@ class GeodynGem(object):
                 print_log("remove layer {}".format(layer.name()), "d")
                 ins.removeMapLayer(layer.id())
                 if delete_source:
-                    pass # not sure if necessary
-                    result = QgsVectorFileWriter.deleteShapeFile(source)
+                    if '.shp' in source.lower():
+                        result = QgsVectorFileWriter.deleteShapeFile(source)
+                    elif '.gpkg' in source.lower():
+                        try:
+                            path = source.split("|")[0]
+                            for path_ in [path, path+"-wal", path+"-shm"]:
+                                if os.path.exists(path_):
+                                    os.remove(path_)
+                            result = True
+                        except Exception as e:
+                            print_log(e, "e", self.iface)
+                            result = False
+                    elif '.csv' in source.lower():
+                        try:
+                            os.remove(source)
+                            result = True
+                        except Exception as e:
+                            print_log(e, "e", self.iface)
+                            result = False
                     if not result:
-                        print_log("Tool afgebroken! Kan resultaat ({}) niet verwijderen!".format(source), "e", self.iface)
+                        print_log("Tool afgebroken! Kan resultaat ({}) niet verwijderen! Resultaten kunnen niet overschreven worden".format(source), "e", self.iface)
                         return
 						
     def select_output_folder(self):

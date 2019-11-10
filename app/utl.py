@@ -220,8 +220,8 @@ def join_field(input_table, join_table, field_to_calc, field_to_copy, joinfield_
         joinObject.setJoinLayer(join_table)
         joinObject.setJoinFieldName(joinfield_join_table)
         joinObject.setTargetFieldName(joinfield_input_table)
-        input_table.addJoin(joinObject)
-
+        if not input_table.addJoin(joinObject):
+            print_log("join failed!", "w")
         # calculate field
         context = QgsExpressionContext()
         scope = QgsExpressionContextScope()
@@ -230,13 +230,16 @@ def join_field(input_table, join_table, field_to_calc, field_to_copy, joinfield_
         ##e.prepare(input_table.fields()) # qgis 2
         print_log("expression = {}".format('"{}_{}"'.format(join_table.name(),field_to_copy)), "d")
 
-        check = input_table.fields().indexFromName('{}_{}'.format(join_table.name(),field_to_copy))
-        print_log("fieldindex = {}".format(check), "d")
-        if check == -1:
+        idx_field_to_copy = input_table.fields().indexFromName('{}_{}'.format(join_table.name(), field_to_copy))
+        if idx_field_to_copy == -1:
             print_log("[{}] is leeg omdat [{}] ontbreekt in kaartlaag '{}'.".format(field_to_calc, field_to_copy, join_table.name()), "w")
-
+        idx_joinfield_join_table = join_table.fields().indexFromName(joinfield_join_table)
+        if idx_joinfield_join_table == -1:
+            print_log("join_field [{}] ontbreekt in {}. table join mislukt.".format(joinfield_join_table, join_table.name()),"w")
         input_table.startEditing()
         idx = input_table.fields().indexFromName(field_to_calc)
+        if idx == -1:
+            print_log("field_to_calculate [{}] niet gevonden in kaartlaag '{}'.".format(field_to_calc, input_table.name()), "w")
         if inner_join:
             print_log("inner_join = True", 'd')
             s_expr = '"{}_{}" IS NOT NULL'.format(join_table.name(),field_to_copy)
