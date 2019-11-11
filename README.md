@@ -20,7 +20,7 @@ https://github.com/bart147/GeodynGem_for_QGIS/blob/master/doc/HandleidingGeoDynG
 
 # Installation
 - Install the plugin with Plugin Manager in QGIS or download here https://plugins.qgis.org/plugins/GeodynGem/
-- Requires QGIS 2.x
+- Requires QGIS 3.4
 
 # Test data
 Some imaginary data for testing can be downloaded from the repo:
