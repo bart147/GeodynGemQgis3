@@ -324,7 +324,7 @@ def get_d_velden_csv(INP_FIELDS_CSV):
     import csv
     d_velden = {}
 
-    input_file = csv.DictReader(open(INP_FIELDS_CSV), delimiter=";")
+    input_file = csv.DictReader(open(INP_FIELDS_CSV, encoding="ISO-8859-1"), delimiter=";")
 
     for srow in input_file:
         if not srow["fieldname"]:

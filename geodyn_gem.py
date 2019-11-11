@@ -193,10 +193,16 @@ class GeodynGem(object):
 
         for layer in layers:
             source = layer.source()
-            if layer.name() in layers_to_remove:
-                print_log("remove layer {}".format(layer.name()), "d")
+            name = layer.name()
+            if name in layers_to_remove:
+                print_log("remove layer {}".format(name), "d")
                 ins.removeMapLayer(layer.id())
+
+
+            if name in layers_to_remove:
+                #ins.removeMapLayer(layer.id())
                 if delete_source:
+                    print_log("remove layer.source {}".format(name), "d")
                     if '.shp' in source.lower():
                         result = QgsVectorFileWriter.deleteShapeFile(source)
                     elif '.gpkg' in source.lower():
@@ -217,7 +223,7 @@ class GeodynGem(object):
                             print_log(e, "e", self.iface)
                             result = False
                     if not result:
-                        print_log("Tool afgebroken! Kan resultaat ({}) niet verwijderen! Resultaten kunnen niet overschreven worden".format(source), "e", self.iface)
+                        print_log("Tool afgebroken! Kan resultaat ({}) niet verwijderen i.v.m. locking. Resultaten kunnen niet overschreven worden en dienen (handmatig) te worden verwijderd.".format(source), "e", self.iface)
                         return
 						
     def select_output_folder(self):
