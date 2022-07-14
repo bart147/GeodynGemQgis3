@@ -85,6 +85,7 @@ def genereer_knooppunten(iface, inp_polygon, sel_afvoerrelaties):
     pr = point_layer.dataProvider()
     point_layer.dataProvider().addAttributes(
         [QgsField("VAN_KNOOPN", QVariant.String),
+         QgsField("NAAR_KNOOP", QVariant.String),
          QgsField("BEGIN_EIND", QVariant.Int)])
     point_layer.updateFields()
     point_layer = add_layer(point_layer)
@@ -95,12 +96,14 @@ def genereer_knooppunten(iface, inp_polygon, sel_afvoerrelaties):
         end_point = QgsPointXY(geom[-1])
         feat.setGeometry(QgsGeometry.fromPointXY(start_point))
         feat.setAttribute("VAN_KNOOPN", feature['VAN_KNOOPN'])
+        feat.setAttribute("NAAR_KNOOP", feature['NAAR_KNOOP'])
         feat.setAttribute("BEGIN_EIND", 0)
         pr.addFeatures([feat])
         ##point_layer.changeAttributeValue(i, 0, "hoi")
         ##i += 1
         feat.setGeometry(QgsGeometry.fromPointXY(end_point))
         feat.setAttribute("VAN_KNOOPN", feature['VAN_KNOOPN'])
+        feat.setAttribute("NAAR_KNOOP", feature['NAAR_KNOOP'])
         feat.setAttribute("BEGIN_EIND", 1)
         ##point_layer.changeAttributeValue(i, 1, 99)
         pr.addFeatures([feat])

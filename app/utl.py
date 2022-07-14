@@ -369,7 +369,7 @@ def add_layer(layer, visible=True):
 
 def update_datetime(layer, fieldname):
     if layer.fields().indexFromName(fieldname) == -1:
-        layer.dataProvider().addAttributes([QgsField(name=fieldname, type=QVariant.String, len=19)])
+        layer.dataProvider().addAttributes([QgsField(name=fieldname, type=QVariant.String, len=50)])
         layer.updateFields()
     field = layer.fields().indexFromName(fieldname)
     context = QgsExpressionContext()
